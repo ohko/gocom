@@ -1,6 +1,7 @@
 package gocom
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -46,4 +47,32 @@ func TestMin(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRandIntn(t *testing.T) {
+	fmt.Print("0-0:")
+	for i := 0; i < 10; i++ {
+		fmt.Print(RandIntn(0, 0), ",")
+	}
+	fmt.Println()
+	fmt.Print("0-1:")
+	for i := 0; i < 10; i++ {
+		fmt.Print(RandIntn(0, 1), ",")
+	}
+	fmt.Println()
+	fmt.Print("0-2:")
+	for i := 0; i < 10; i++ {
+		fmt.Print(RandIntn(0, 2), ",")
+	}
+	fmt.Println()
+	fmt.Print("1-2:")
+	for i := 0; i < 10; i++ {
+		fmt.Print(RandIntn(1, 2), ",")
+	}
+	fmt.Println()
+	fmt.Print("1-3:")
+	for i := 0; i < 10; i++ {
+		fmt.Print(RandIntn(1, 3), ",")
+	}
+	fmt.Println()
 }

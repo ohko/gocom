@@ -1,12 +1,19 @@
 package gocom
 
 import (
+	"bytes"
 	crand "crypto/rand"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
+	"math/rand"
 	"net"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 )
 
 // Max 返回较大的值
@@ -161,6 +168,11 @@ func MakeGUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[8:10], b[6:8], b[4:6], b[10:])
 }
 
+// RandIntn 返回随机数：x <= n <= y
+func RandIntn(x, y int) int {
+	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn((y-x)+1) + x
+}
+
 // Bmp1px ...
 func Bmp1px(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
@@ -171,4 +183,50 @@ func Bmp1px(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Accept-Ranges", "bytes")
 	w.Write([]byte{0x42, 0x4d, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff})
+}
+
+// BasicAuth ...
+func BasicAuth(f http.HandlerFunc, user, pass string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println(err)
+				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+				w.WriteHeader(http.StatusUnauthorized)
+			}
+		}()
+
+		basicAuthPrefix := "Basic "
+
+		auth := r.Header.Get("Authorization")
+		if strings.HasPrefix(auth, basicAuthPrefix) {
+			payload, err := base64.StdEncoding.DecodeString(
+				auth[len(basicAuthPrefix):],
+			)
+			if err == nil {
+				pair := bytes.SplitN(payload, []byte(":"), 2)
+				if len(pair) == 2 &&
+					bytes.Equal(pair[0], []byte(user)) &&
+					bytes.Equal(pair[1], []byte(pass)) {
+					f(w, r)
+					return
+				}
+			}
+		}
+
+		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+}
+
+// NewLogger ...
+func NewLogger(logFileName string) (*log.Logger, error) {
+	if strings.Contains(logFileName, "_%s") {
+		logFileName = fmt.Sprintf(logFileName, time.Now().Format("2006-01-02"))
+	}
+	f, e := os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	if e != nil {
+		return nil, e
+	}
+	return log.New(f, "", log.Ldate|log.Ltime), nil
 }
