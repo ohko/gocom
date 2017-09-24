@@ -12,9 +12,17 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 )
+
+func init() {
+	log.SetFlags(log.Ltime | log.Lshortfile)
+	runtime.GOMAXPROCS(runtime.NumCPU())
+}
 
 // Max 返回较大的值
 func Max(x, y interface{}) interface{} {
@@ -229,4 +237,26 @@ func NewLogger(logFileName string) (*log.Logger, error) {
 		return nil, e
 	}
 	return log.New(f, "", log.Ldate|log.Ltime), nil
+}
+
+// OutJSON ...
+func OutJSON(w io.Writer, r *http.Request, no int, msg interface{}) error {
+	js, err := jsoniter.MarshalToString(map[string]interface{}{
+		"no":  no,
+		"msg": msg,
+	})
+	if err != nil {
+		return err
+	}
+
+	r.ParseForm()
+	callback := r.FormValue("callback")
+	if callback != "" {
+		fmt.Fprint(w, callback+"(")
+		fmt.Fprint(w, js)
+		fmt.Fprintln(w, ")")
+	} else {
+		fmt.Fprintln(w, js)
+	}
+	return nil
 }
