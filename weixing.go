@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -30,13 +31,15 @@ func SendWeixin(CORPID, CORPSECRET, Touser, Agentid, sz string) {
 	_url := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s", CORPID, CORPSECRET)
 	req, err := http.Get(_url)
 	if err != nil {
-		panic(err.Error())
+		log.Println(err.Error())
+		return
 	}
 
 	// decode access_token
 	var acc accessTokenSt
 	if err := json.NewDecoder(req.Body).Decode(&acc); err != nil {
-		panic(err.Error())
+		log.Println(err.Error())
+		return
 	}
 
 	// post data
@@ -51,7 +54,8 @@ func SendWeixin(CORPID, CORPSECRET, Touser, Agentid, sz string) {
 	data, _ := json.Marshal(msg)
 	req, err = http.Post(_url, "application/json; charset=utf-8", bytes.NewBuffer(data))
 	if err != nil {
-		panic(err.Error())
+		log.Println(err.Error())
+		return
 	}
 	r, _ := ioutil.ReadAll(req.Body)
 	fmt.Println(string(r))
