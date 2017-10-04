@@ -2,6 +2,7 @@ package gocom
 
 import (
 	"bytes"
+	"compress/gzip"
 	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
@@ -240,7 +241,17 @@ func NewLogger(logFileName string) (*log.Logger, error) {
 }
 
 // OutJSON ...
-func OutJSON(w io.Writer, r *http.Request, no int, msg interface{}) error {
+func OutJSON(w http.ResponseWriter, r *http.Request, no int, msg interface{}, gz bool) error {
+	var ww io.Writer
+	if gz {
+		w.Header().Set("Content-Encoding", "gzip")
+		g := gzip.NewWriter(w)
+		ww = g
+		defer g.Close()
+	} else {
+		ww = w
+	}
+
 	js, err := jsoniter.MarshalToString(map[string]interface{}{
 		"no":  no,
 		"msg": msg,
@@ -252,11 +263,11 @@ func OutJSON(w io.Writer, r *http.Request, no int, msg interface{}) error {
 	r.ParseForm()
 	callback := r.FormValue("callback")
 	if callback != "" {
-		fmt.Fprint(w, callback+"(")
-		fmt.Fprint(w, js)
-		fmt.Fprintln(w, ")")
+		fmt.Fprint(ww, callback+"(")
+		fmt.Fprint(ww, js)
+		fmt.Fprintln(ww, ")")
 	} else {
-		fmt.Fprintln(w, js)
+		fmt.Fprintln(ww, js)
 	}
 	return nil
 }
