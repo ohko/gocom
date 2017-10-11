@@ -242,6 +242,7 @@ func NewLogger(logFileName string) (*log.Logger, error) {
 
 // OutJSON ...
 func OutJSON(w http.ResponseWriter, r *http.Request, no int, msg interface{}, gz bool) error {
+	w.Header().Set("Content-Type", "application/json")
 	var ww io.Writer
 	if gz {
 		w.Header().Set("Content-Encoding", "gzip")
