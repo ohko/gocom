@@ -8,16 +8,19 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
+	"golang.org/x/net/proxy"
 )
 
 func init() {
@@ -271,4 +274,68 @@ func OutJSON(w http.ResponseWriter, r *http.Request, no int, msg interface{}, gz
 		fmt.Fprintln(ww, js)
 	}
 	return nil
+}
+
+// HTTPGetOption ...
+type HTTPGetOption struct {
+	Timeout time.Duration
+	Headers map[string]string
+	Socks5  string
+}
+
+// HTTPGet ...
+func HTTPGet(uri string, opt HTTPGetOption) (rtn string, err error) {
+	var client http.Client
+	if opt.Socks5 != "" {
+		dialer, err := proxy.SOCKS5("tcp", opt.Socks5, nil, &net.Dialer{Timeout: opt.Timeout, KeepAlive: opt.Timeout})
+		if err != nil {
+			return "", err
+		}
+		httpTransport := &http.Transport{Dial: dialer.Dial}
+		client = http.Client{Timeout: opt.Timeout, Transport: httpTransport}
+	} else {
+		client = http.Client{Timeout: opt.Timeout}
+	}
+
+	req, _ := http.NewRequest("GET", uri, nil)
+	for k, v := range opt.Headers {
+		req.Header.Set(k, v)
+	}
+
+	// request
+	res, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	// data
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	return string(body), nil
+}
+
+/*
+MakeSslFile 生成域名证书
+openssl genrsa -des3 -passout pass:123456 -out ssl.pass.key 2048
+openssl rsa -passin pass:123456 -in ssl.pass.key -out ssl.key
+rm -rf ssl.pass.key
+openssl req -new -subj "/C=US/ST=Mars/L=iTranswarp/O=iTranswarp/OU=iTranswarp/CN=*.com" -key ssl.key -out ssl.csr
+openssl x509 -req -days 365 -in ssl.csr -signkey ssl.key -out ssl.crt
+rm -rf ssl.csr
+
+校验
+openssl x509 -noout -modulus -in ssl.crt | openssl md5
+openssl rsa -noout -modulus -in ssl.key | openssl md5
+*/
+func MakeSSLFile(origin string) {
+	exec.Command(`openssl`, `genrsa`, `-des3`, `-passout`, `pass:123456`, `-out`, origin+`.pass.key`, `2048`).CombinedOutput()
+	exec.Command("openssl", `rsa`, `-passin`, `pass:123456`, `-in`, origin+`.pass.key`, `-out`, origin+`.key`).CombinedOutput()
+	exec.Command("rm", origin+`.pass.key`).CombinedOutput()
+	exec.Command("openssl", `req`, `-new`, `-subj`, `/C=US/ST=Mars/L=iTranswarp/O=iTranswarp/OU=iTranswarp/CN=`+origin, `-key`, origin+`.key`, `-out`, origin+`.csr`).CombinedOutput()
+	exec.Command("openssl", `x509`, `-req`, `-days`, `365`, `-in`, origin+`.csr`, `-signkey`, origin+`.key`, `-out`, origin+`.crt`).CombinedOutput()
+	exec.Command("rm", origin+`.csr`).CombinedOutput()
 }

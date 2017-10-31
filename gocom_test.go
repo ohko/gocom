@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestMax(t *testing.T) {
@@ -75,4 +76,8 @@ func TestRandIntn(t *testing.T) {
 		fmt.Print(RandIntn(1, 3), ",")
 	}
 	fmt.Println()
+}
+
+func Test_httpGet(t *testing.T) {
+	fmt.Println(HTTPGet("http://www.baidu.com", HTTPGetOption{Timeout: time.Second * 5}))
 }
