@@ -3,12 +3,15 @@ package gocom
 import (
 	"bytes"
 	"compress/gzip"
-	crand "crypto/rand"
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
@@ -17,81 +20,117 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
-
-	jsoniter "github.com/json-iterator/go"
-	"golang.org/x/net/proxy"
 )
 
-func init() {
-	log.SetFlags(log.Ltime | log.Lshortfile)
+// MustInit 通常都会使用的设置
+func MustInit() {
+	flag.Parse()
+	log.SetFlags(log.Flags() | log.Lshortfile)
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
 // Max 返回较大的值
-func Max(x, y interface{}) interface{} {
-	switch x.(type) {
+func Max(x ...interface{}) (interface{}, error) {
+	if len(x) == 0 {
+		return nil, errors.New("size error")
+	}
+
+	switch x[0].(type) {
 	case int:
-		if x.(int) > y.(int) {
-			return x
+		max := x[0].(int)
+		for _, v := range x {
+			if v.(int) > max {
+				max = v.(int)
+			}
 		}
-		return y
+		return max, nil
 	case int32:
-		if x.(int32) > y.(int32) {
-			return x
+		max := x[0].(int32)
+		for _, v := range x {
+			if v.(int32) > max {
+				max = v.(int32)
+			}
 		}
-		return y
+		return max, nil
 	case int64:
-		if x.(int64) > y.(int64) {
-			return x
+		max := x[0].(int64)
+		for _, v := range x {
+			if v.(int64) > max {
+				max = v.(int64)
+			}
 		}
-		return y
+		return max, nil
 	case float32:
-		if x.(float32) > y.(float32) {
-			return x
+		max := x[0].(float32)
+		for _, v := range x {
+			if v.(float32) > max {
+				max = v.(float32)
+			}
 		}
-		return y
+		return max, nil
 	case float64:
-		if x.(float64) > y.(float64) {
-			return x
+		max := x[0].(float64)
+		for _, v := range x {
+			if v.(float64) > max {
+				max = v.(float64)
+			}
 		}
-		return y
+		return max, nil
 	default:
-		panic("type error")
+		return nil, errors.New("type error")
 	}
 }
 
 // Min 返回较小的值
-func Min(x, y interface{}) interface{} {
-	switch x.(type) {
+func Min(x ...interface{}) (interface{}, error) {
+	if len(x) == 0 {
+		return nil, errors.New("size error")
+	}
+
+	switch x[0].(type) {
 	case int:
-		if x.(int) < y.(int) {
-			return x
+		min := x[0].(int)
+		for _, v := range x {
+			if v.(int) < min {
+				min = v.(int)
+			}
 		}
-		return y
+		return min, nil
 	case int32:
-		if x.(int32) < y.(int32) {
-			return x
+		min := x[0].(int32)
+		for _, v := range x {
+			if v.(int32) < min {
+				min = v.(int32)
+			}
 		}
-		return y
+		return min, nil
 	case int64:
-		if x.(int64) < y.(int64) {
-			return x
+		min := x[0].(int64)
+		for _, v := range x {
+			if v.(int64) < min {
+				min = v.(int64)
+			}
 		}
-		return y
+		return min, nil
 	case float32:
-		if x.(float32) < y.(float32) {
-			return x
+		min := x[0].(float32)
+		for _, v := range x {
+			if v.(float32) < min {
+				min = v.(float32)
+			}
 		}
-		return y
+		return min, nil
 	case float64:
-		if x.(float64) < y.(float64) {
-			return x
+		min := x[0].(float64)
+		for _, v := range x {
+			if v.(float64) < min {
+				min = v.(float64)
+			}
 		}
-		return y
+		return min, nil
 	default:
-		panic("type error")
+		return nil, errors.New("type error")
 	}
 }
 
@@ -154,18 +193,8 @@ func Int2IP(nn uint32) net.IP {
 	return ip
 }
 
-// InArrayInt ...
-func InArrayInt(a []int, b int) bool {
-	for _, v := range a {
-		if v == b {
-			return true
-		}
-	}
-	return false
-}
-
-// InArrayString ...
-func InArrayString(a []string, b string) bool {
+// InArray ...
+func InArray(a []interface{}, b interface{}) bool {
 	for _, v := range a {
 		if v == b {
 			return true
@@ -177,7 +206,7 @@ func InArrayString(a []string, b string) bool {
 // MakeGUID 生成唯一的GUID
 func MakeGUID() string {
 	b := make([]byte, 16)
-	io.ReadFull(crand.Reader, b)
+	rand.Read(b)
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[8:10], b[6:8], b[4:6], b[10:])
 }
 
@@ -186,7 +215,7 @@ func RandIntn(x, y int) int {
 	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn((y-x)+1) + x
 }
 
-// Bmp1px ...
+// Bmp1px 1像素bmp图片
 func Bmp1px(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
@@ -198,7 +227,7 @@ func Bmp1px(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte{0x42, 0x4d, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff})
 }
 
-// BasicAuth ...
+// BasicAuth 简单验证
 func BasicAuth(f http.HandlerFunc, user, pass string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -257,7 +286,7 @@ func OutJSON(w http.ResponseWriter, r *http.Request, no int, msg interface{}, gz
 		ww = w
 	}
 
-	js, err := jsoniter.MarshalToString(map[string]interface{}{
+	bs, err := json.Marshal(map[string]interface{}{
 		"no":  no,
 		"msg": msg,
 	})
@@ -269,69 +298,32 @@ func OutJSON(w http.ResponseWriter, r *http.Request, no int, msg interface{}, gz
 	callback := r.FormValue("callback")
 	if callback != "" {
 		fmt.Fprint(ww, callback+"(")
-		fmt.Fprint(ww, js)
+		fmt.Fprint(ww, string(bs))
 		fmt.Fprintln(ww, ")")
 	} else {
-		fmt.Fprintln(ww, js)
+		fmt.Fprintln(ww, string(bs))
 	}
 	return nil
 }
 
-// HTTPGetOption ...
-type HTTPGetOption struct {
-	Timeout time.Duration
-	Headers map[string]string
-	Socks5  string
+// Md5 ...
+func Md5(data []byte) string {
+	m := md5.New()
+	m.Write(data)
+	return hex.EncodeToString(m.Sum(nil))
 }
 
-// HTTPGet ...
-func HTTPGet(uri string, opt HTTPGetOption) (rtn string, err error) {
-	var client http.Client
-	if opt.Socks5 != "" {
-		dialer, err := proxy.SOCKS5("tcp", opt.Socks5, nil, &net.Dialer{Timeout: opt.Timeout, KeepAlive: opt.Timeout})
-		if err != nil {
-			return "", err
-		}
-		httpTransport := &http.Transport{Dial: dialer.Dial}
-		client = http.Client{Timeout: opt.Timeout, Transport: httpTransport}
-	} else {
-		client = http.Client{Timeout: opt.Timeout}
-	}
-
-	req, _ := http.NewRequest("GET", uri, nil)
-	for k, v := range opt.Headers {
-		req.Header.Set(k, v)
-	}
-
-	// request
-	res, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-
-	// data
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	return string(body), nil
-}
-
-/*
-MakeSslFile 生成域名证书
-openssl genrsa -des3 -passout pass:123456 -out ssl.pass.key 2048
-openssl rsa -passin pass:123456 -in ssl.pass.key -out ssl.key
-rm -rf ssl.pass.key
-openssl req -new -subj "/C=US/ST=Mars/L=iTranswarp/O=iTranswarp/OU=iTranswarp/CN=*.com" -key ssl.key -out ssl.csr
-openssl x509 -req -days 365 -in ssl.csr -signkey ssl.key -out ssl.crt
-rm -rf ssl.csr
-
-校验
-openssl x509 -noout -modulus -in ssl.crt | openssl md5
-openssl rsa -noout -modulus -in ssl.key | openssl md5
-*/
+// MakeSSLFile 生成域名证书
+// openssl genrsa -des3 -passout pass:123456 -out ssl.pass.key 2048
+// openssl rsa -passin pass:123456 -in ssl.pass.key -out ssl.key
+// rm -rf ssl.pass.key
+// openssl req -new -subj "/C=US/ST=Mars/L=iTranswarp/O=iTranswarp/OU=iTranswarp/CN=*.com" -key ssl.key -out ssl.csr
+// openssl x509 -req -days 365 -in ssl.csr -signkey ssl.key -out ssl.crt
+// rm -rf ssl.csr
+//
+// 校验
+// openssl x509 -noout -modulus -in ssl.crt | openssl md5
+// openssl rsa -noout -modulus -in ssl.key | openssl md5
 func MakeSSLFile(origin string) {
 	exec.Command(`openssl`, `genrsa`, `-des3`, `-passout`, `pass:123456`, `-out`, origin+`.pass.key`, `2048`).CombinedOutput()
 	exec.Command("openssl", `rsa`, `-passin`, `pass:123456`, `-in`, origin+`.pass.key`, `-out`, origin+`.key`).CombinedOutput()
@@ -341,29 +333,27 @@ func MakeSSLFile(origin string) {
 	exec.Command("rm", origin+`.csr`).CombinedOutput()
 }
 
-/*
-MakeTLSFile 生成TLS双向认证证书
-# 1.创建根证书密钥文件(自己做CA)root.key：
-openssl genrsa -des3 -passout pass:123 -out ssl/root.key 2048
-# 2.创建根证书的申请文件root.csr：
-openssl req -passin pass:123 -new -subj "/C=CN/ST=Shanghai/L=Shanghai/O=MyCompany/OU=MyCompany/CN=localhost/emailAddress=hk@cdeyun.com" -key ssl/root.key -out ssl/root.csr
-# 3.创建根证书root.crt：
-openssl x509 -passin pass:123 -req -days 3650 -sha256 -extensions v3_ca -signkey ssl/root.key -in ssl/root.csr -out ssl/root.crt
-rm -rf ssl/root.csr
-
-# 1.创建客户端证书私钥
-openssl genrsa -des3 -passout pass:456 -out ssl/ssl.key 2048
-# 2.去除key口令
-openssl rsa -passin pass:456 -in ssl/ssl.key -out ssl/ssl.key
-# 3.创建客户端证书申请文件ssl.csr
-openssl req -new -subj "/C=CN/ST=Shanghai/L=Shanghai/O=MyCompany/OU=MyCompany/CN=localhost/emailAddress=hk@cdeyun.com" -key ssl/ssl.key -out ssl/ssl.csr
-# 4.创建客户端证书文件ssl.crt
-openssl x509 -passin pass:123 -req -days 365 -sha256 -extensions v3_req -CA ssl/root.crt -CAkey ssl/root.key -CAcreateserial -in ssl/ssl.csr -out ssl/ssl.crt
-rm -rf ssl/ssl.csr
-rm -rf ssl/root.srl
-# 5.将客户端证书文件ssl.crt和客户端证书密钥文件ssl.key合并成客户端证书安装包ssl.pfx
-openssl pkcs12 -export -passout pass:789 -in ssl/ssl.crt -inkey ssl/ssl.key -out ssl/ssl.pfx
-*/
+// MakeTLSFile 生成TLS双向认证证书
+// # 1.创建根证书密钥文件(自己做CA)root.key：
+// openssl genrsa -des3 -passout pass:123 -out ssl/root.key 2048
+// # 2.创建根证书的申请文件root.csr：
+// openssl req -passin pass:123 -new -subj "/C=CN/ST=Shanghai/L=Shanghai/O=MyCompany/OU=MyCompany/CN=localhost/emailAddress=hk@cdeyun.com" -key ssl/root.key -out ssl/root.csr
+// # 3.创建根证书root.crt：
+// openssl x509 -passin pass:123 -req -days 3650 -sha256 -extensions v3_ca -signkey ssl/root.key -in ssl/root.csr -out ssl/root.crt
+// rm -rf ssl/root.csr
+//
+// # 1.创建客户端证书私钥
+// openssl genrsa -des3 -passout pass:456 -out ssl/ssl.key 2048
+// # 2.去除key口令
+// openssl rsa -passin pass:456 -in ssl/ssl.key -out ssl/ssl.key
+// # 3.创建客户端证书申请文件ssl.csr
+// openssl req -new -subj "/C=CN/ST=Shanghai/L=Shanghai/O=MyCompany/OU=MyCompany/CN=localhost/emailAddress=hk@cdeyun.com" -key ssl/ssl.key -out ssl/ssl.csr
+// # 4.创建客户端证书文件ssl.crt
+// openssl x509 -passin pass:123 -req -days 365 -sha256 -extensions v3_req -CA ssl/root.crt -CAkey ssl/root.key -CAcreateserial -in ssl/ssl.csr -out ssl/ssl.crt
+// rm -rf ssl/ssl.csr
+// rm -rf ssl/root.srl
+// # 5.将客户端证书文件ssl.crt和客户端证书密钥文件ssl.key合并成客户端证书安装包ssl.pfx
+// openssl pkcs12 -export -passout pass:789 -in ssl/ssl.crt -inkey ssl/ssl.key -out ssl/ssl.pfx
 func MakeTLSFile(passRoot, passKey, passPfx, domain, email string) bool {
 	domain = "ssl/" + domain
 	os.Mkdir("ssl", 0755)
@@ -398,56 +388,4 @@ func MakeTLSFile(passRoot, passKey, passPfx, domain, email string) bool {
 	bs1, _ := exec.Command(`openssl`, `x509`, `-noout`, `-modulus`, `-in`, domain+`.ssl.crt`).CombinedOutput()
 	bs2, _ := exec.Command(`openssl`, `rsa`, `-noout`, `-modulus`, `-in`, domain+`.ssl.key`).CombinedOutput()
 	return string(bs1) == string(bs2)
-}
-
-// Daemon ...
-func Daemon(nochdir, noclose int) int {
-	var ret, ret2 uintptr
-	var err syscall.Errno
-	darwin := runtime.GOOS == "darwin"
-	// already a daemon
-	if syscall.Getppid() == 1 {
-		return 0
-	}
-	// fork off the parent process
-	ret, ret2, err = syscall.RawSyscall(syscall.SYS_FORK, 0, 0, 0)
-	if err != 0 {
-		return -1
-	}
-	// failure
-	if ret2 < 0 {
-		os.Exit(-1)
-	}
-	// handle exception for darwin
-	if darwin && ret2 == 1 {
-		ret = 0
-	}
-	// if we got a good PID, then we call exit the parent process.
-	if ret > 0 {
-		os.Exit(0)
-	}
-	/* Change the file mode mask */
-	_ = syscall.Umask(0)
-
-	// create a new SID for the child process
-	sRet, sErrNo := syscall.Setsid()
-	if sErrNo != nil {
-		log.Printf("Error: syscall.Setsid errno: %d", sErrNo)
-	}
-	if sRet < 0 {
-		return -1
-	}
-	if nochdir == 0 {
-		os.Chdir("/")
-	}
-	if noclose == 0 {
-		f, e := os.OpenFile("/dev/null", os.O_RDWR, 0)
-		if e == nil {
-			fd := f.Fd()
-			syscall.Dup2(int(fd), int(os.Stdin.Fd()))
-			syscall.Dup2(int(fd), int(os.Stdout.Fd()))
-			syscall.Dup2(int(fd), int(os.Stderr.Fd()))
-		}
-	}
-	return 0
 }
