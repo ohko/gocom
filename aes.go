@@ -15,7 +15,11 @@ func pkcs5Padding(ciphertext []byte, blockSize int) []byte {
 func pkcs5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
-	return origData[:(length - unpadding)]
+	pos := length - unpadding
+	if pos < 0 || pos >= len(origData) {
+		return origData
+	}
+	return origData[:pos]
 }
 
 // AESCBCEncrypt aes加密数据
