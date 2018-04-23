@@ -193,8 +193,18 @@ func Int2IP(nn uint32) net.IP {
 	return ip
 }
 
-// InArray ...
-func InArray(a []interface{}, b interface{}) bool {
+// InArrayString ...
+func InArrayString(a []string, b string) bool {
+	for _, v := range a {
+		if v == b {
+			return true
+		}
+	}
+	return false
+}
+
+// InArrayInt ...
+func InArrayInt(a []int, b int) bool {
 	for _, v := range a {
 		if v == b {
 			return true
