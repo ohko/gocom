@@ -213,6 +213,16 @@ func InArrayInt(a []int, b int) bool {
 	return false
 }
 
+// InArrayFloat ...
+func InArrayFloat(a []float64, b float64) bool {
+	for _, v := range a {
+		if v == b {
+			return true
+		}
+	}
+	return false
+}
+
 // MakeGUID 生成唯一的GUID
 func MakeGUID() string {
 	b := make([]byte, 16)
