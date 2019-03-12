@@ -1,4 +1,4 @@
-package gocom
+package com
 
 import (
 	"bytes"

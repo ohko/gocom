@@ -1,3 +1,3 @@
-module github/ohko/gocom
+module github/ohko/com
 
 go 1.12
