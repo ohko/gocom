@@ -1,93 +1,82 @@
 package gocom
 
 import (
-	"fmt"
-	"reflect"
+	"net"
 	"testing"
 )
 
-func TestMin(t *testing.T) {
-	type args struct {
-		x []interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want interface{}
-	}{
-		{"1", args{[]interface{}{1}}, 1},
-		{"1,2", args{[]interface{}{1, 2}}, 1},
-		{"3,1,2", args{[]interface{}{3, 1, 2}}, 1},
-		{"3.0,1.0,2.0", args{[]interface{}{3.0, 1.0, 2.0}}, 1.0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := Min(tt.args.x...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Max() = %v, want %v", got, tt.want)
-			}
-		})
+func TestIP2Int(t *testing.T) {
+	if 0x7F000001 != IP2Int(net.ParseIP("127.0.0.1")) {
+		t.Fail()
 	}
 }
 
-func TestRandIntn(t *testing.T) {
-	fmt.Print("0-0:")
-	for i := 0; i < 10; i++ {
-		fmt.Print(RandIntn(0, 0), ",")
+func TestInt2IP(t *testing.T) {
+	if "127.0.0.1" != Int2IP(0x7F000001).String() {
+		t.Fail()
 	}
-	fmt.Println()
-	fmt.Print("0-1:")
-	for i := 0; i < 10; i++ {
-		fmt.Print(RandIntn(0, 1), ",")
-	}
-	fmt.Println()
-	fmt.Print("0-2:")
-	for i := 0; i < 10; i++ {
-		fmt.Print(RandIntn(0, 2), ",")
-	}
-	fmt.Println()
-	fmt.Print("1-2:")
-	for i := 0; i < 10; i++ {
-		fmt.Print(RandIntn(1, 2), ",")
-	}
-	fmt.Println()
-	fmt.Print("1-3:")
-	for i := 0; i < 10; i++ {
-		fmt.Print(RandIntn(1, 3), ",")
-	}
-	fmt.Println()
-
-	c := 100
-	m := make(map[int]int, c)
-	for i := 0; i < c; i++ {
-		n := RandIntn(0, c)
-		if _, ok := m[n]; !ok {
-			m[n] = 0
+}
+func TestInArray(t *testing.T) {
+	{
+		a := []string{"a", "b"}
+		b := "b"
+		c := "c"
+		if !InArray(a, b) {
+			t.Fail()
 		}
-		m[n]++
+		if InArray(a, c) {
+			t.Fail()
+		}
 	}
-	fmt.Println(m)
+
+	{
+		a := []int{1, 2}
+		b := 2
+		c := 3
+		if !InArray(a, b) {
+			t.Fail()
+		}
+		if InArray(a, c) {
+			t.Fail()
+		}
+	}
+
+	{
+		a := []float64{1.1, 2.2}
+		b := 2.2
+		c := 3.3
+		if !InArray(a, b) {
+			t.Fail()
+		}
+		if InArray(a, c) {
+			t.Fail()
+		}
+	}
 }
 
-func TestMax(t *testing.T) {
-	type args struct {
-		x []interface{}
+func TestMaxMin(t *testing.T) {
+	if MaxMin([]int{1, 2, 3}, func(a, b interface{}) interface{} {
+		return Ternary(a.(int) > b.(int), a, b)
+	}).(int) != 3 {
+		t.Fail()
 	}
-	tests := []struct {
-		name string
-		args args
-		want interface{}
-	}{
-		{"1", args{[]interface{}{1}}, 1},
-		{"1,2", args{[]interface{}{1, 2}}, 2},
-		{"3,1,2", args{[]interface{}{3, 1, 2}}, 3},
-		{"3.0,1.0,2.0", args{[]interface{}{3.0, 1.0, 2.0}}, 3.0},
+
+	if MaxMin([]float64{1.2, 4.3, 2.3, 3.4}, func(a, b interface{}) interface{} {
+		return Ternary(a.(float64) > b.(float64), a, b)
+	}).(float64) != 4.3 {
+		t.Fail()
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := Max(tt.args.x...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Max() = %v, want %v", got, tt.want)
-			}
-		})
+
+	if MaxMin([]int{1, 2, 3}, func(a, b interface{}) interface{} {
+		return Ternary(a.(int) < b.(int), a, b)
+	}).(int) != 1 {
+		t.Fail()
+	}
+
+	if MaxMin([]float64{1.2, 4.3, 2.3, 3.4}, func(a, b interface{}) interface{} {
+		return Ternary(a.(float64) < b.(float64), a, b)
+	}).(float64) != 1.2 {
+		t.Fail()
 	}
 }
 
@@ -103,45 +92,46 @@ func TestMakeGUID(t *testing.T) {
 	}
 }
 
-func TestInArray(t *testing.T) {
-	type args struct {
-		a []interface{}
-		b interface{}
+func TestRandIntn(t *testing.T) {
+	count := 1000
+	for i := 0; i < count; i++ {
+		if RandIntn(0, 0) != 0 {
+			t.Fail()
+		}
 	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{"1", args{a: []interface{}{1, 2, 3}, b: 1}, true},
-		{"2", args{a: []interface{}{1.1, 2.2, 3.3}, b: 1.1}, true},
-		{"3", args{a: []interface{}{1.1, 2.2, 3.3}, b: 1.2}, false},
+	for i := 0; i < count; i++ {
+		if RandIntn(0, 1) < 0 || RandIntn(0, 1) > 1 {
+			t.Fail()
+		}
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := InArray(tt.args.a, tt.args.b); got != tt.want {
-				t.Errorf("InArray() = %v, want %v", got, tt.want)
-			}
-		})
+	for i := 0; i < count; i++ {
+		if RandIntn(0, 2) < 0 || RandIntn(0, 2) > 2 {
+			t.Fail()
+		}
 	}
-}
+	for i := 0; i < count; i++ {
+		if RandIntn(1, 2) < 1 || RandIntn(1, 2) > 2 {
+			t.Fail()
+		}
+	}
+	for i := 0; i < count; i++ {
+		if RandIntn(1, 3) < 1 || RandIntn(1, 3) > 3 {
+			t.Fail()
+		}
+	}
 
-func TestMd5(t *testing.T) {
-	type args struct {
-		data []byte
+	c := 10000
+	m := make(map[int]int, c)
+	for i := 0; i < c; i++ {
+		n := RandIntn(0, 10)
+		if _, ok := m[n]; !ok {
+			m[n] = 0
+		}
+		m[n]++
 	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{"1", args{[]byte("hk")}, "ae4171856a75f7b67d51fc0e1f95902e"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Md5(tt.args.data); got != tt.want {
-				t.Errorf("Md5() = %v, want %v", got, tt.want)
-			}
-		})
+	for i := 0; i < 10; i++ {
+		if v, ok := m[i]; !ok || v == 0 {
+			t.Fail()
+		}
 	}
 }

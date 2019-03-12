@@ -1,1 +1,1 @@
-golang 常用函数
+# Commonly used golang funcs
