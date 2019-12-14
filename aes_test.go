@@ -1,4 +1,4 @@
-package com
+package gocom
 
 import (
 	"bytes"
@@ -32,8 +32,8 @@ func TestAESEncode(t *testing.T) {
 	msg := "hello"
 
 	for _, key := range keys {
-		en := AESEncode(key, iv, []byte(msg))
-		de := AESEncode(key, iv, en)
+		en := AESCTREncode(key, iv, []byte(msg))
+		de := AESCTREncode(key, iv, en)
 		if bytes.Compare([]byte(msg), de) != 0 {
 			t.Fail()
 		}

@@ -1,4 +1,4 @@
-package com
+package gocom
 
 import (
 	"bytes"
@@ -45,10 +45,10 @@ func AESCBCDecrypt(key, data []byte) []byte {
 	return pkcs5UnPadding(out)
 }
 
-// AESEncode aes encrypt/decrypt
+// AESCTREncode aes encrypt/decrypt
 // key length: 16/24/32
 // iv length: 16
-func AESEncode(key, iv, data []byte) []byte {
+func AESCTREncode(key, iv, data []byte) []byte {
 	block, _ := aes.NewCipher(key)
 	buf := make([]byte, len(data))
 
