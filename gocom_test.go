@@ -1,6 +1,7 @@
 package gocom
 
 import (
+	"log"
 	"net"
 	"testing"
 )
@@ -93,6 +94,7 @@ func TestMakeGUID(t *testing.T) {
 }
 
 func TestRandIntn(t *testing.T) {
+	log.Println(RandIntn(1, 100))
 	count := 1000
 	for i := 0; i < count; i++ {
 		if RandIntn(0, 0) != 0 {

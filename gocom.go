@@ -13,6 +13,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // MustInit some settings that are usually used
@@ -113,8 +114,7 @@ func RandIntn(min, max int) int {
 	if min == 0 && max == 0 {
 		return 0
 	}
-	return rand.Intn(max+1-min) + min
-	// return rand.New(rand.NewSource(time.Now().UnixNano())).Intn((max-min)+1) + min
+	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(max+1-min) + min
 }
 
 // Bmp1px http write 1px bmp picture
