@@ -2,12 +2,13 @@ package gocom
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
+	mrand "math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -103,6 +104,7 @@ func MaxMin(arr interface{}, compare func(a, b interface{}) interface{}) interfa
 }
 
 // MakeGUID make GUID
+// "crypto/rand"
 func MakeGUID() string {
 	b := make([]byte, 16)
 	rand.Read(b)
@@ -110,11 +112,14 @@ func MakeGUID() string {
 }
 
 // RandIntn return min <= x <= max
+// mrand "math/rand"
 func RandIntn(min, max int) int {
 	if min == 0 && max == 0 {
 		return 0
 	}
-	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(max+1-min) + min
+	mrand.Seed(time.Now().UnixNano())
+	return mrand.Intn(max+1-min) + min
+	// return mrand.New(mrand.NewSource(time.Now().UnixNano())).Intn(max+1-min) + min
 }
 
 // Bmp1px http write 1px bmp picture
